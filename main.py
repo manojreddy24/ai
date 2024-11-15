@@ -11,8 +11,9 @@ st.write('This is a simple web scraper that uses AI to scrape and extract specif
 # Input for the URL
 url = st.text_input('Enter the URL to scrape:', '')
 
-# Initialize result as None
-result = None
+# Initialize session state for result if not already present
+if 'result' not in st.session_state:
+    st.session_state.result = None
 
 # Button to start scraping
 if st.button('Scrape Site'):
@@ -43,9 +44,10 @@ if "dom_content" in st.session_state:
             dom_chunks = split_dom_content(st.session_state.dom_content)
 
             try:
-                result = parse_with_ollama(dom_chunks, parse_description)
-                if result.strip():  # Check if parsed result is not empty
-                    st.write(result)
+                # Store the parsed result in session state
+                st.session_state.result = parse_with_ollama(dom_chunks, parse_description)
+                if st.session_state.result.strip():  # Check if parsed result is not empty
+                    st.write(st.session_state.result)
                 else:
                     st.warning("No matching content found.")
             except Exception as e:
@@ -53,44 +55,44 @@ if "dom_content" in st.session_state:
         else:
             st.warning("Please provide a description of what you want to parse.")
 
-    # Provide an option to select the download format
-    if result:
-        download_format = st.selectbox(
-            "Select file format for download:",
-            [".txt", ".csv", ".json"]
-        )
+# Provide an option to select the download format if result exists
+if st.session_state.result:
+    download_format = st.selectbox(
+        "Select file format for download:",
+        [".txt", ".csv", ".json"]
+    )
 
-        # Provide the download button only if the content is parsed
-        if st.button('Download Parsed Result'):
-            if result.strip():
-                # Prepare the data to be downloaded
-                if download_format == ".txt":
-                    # Download as a .txt file
-                    st.download_button(
-                        label="Download as .txt",
-                        data=result,
-                        file_name="parsed_result.txt",
-                        mime="text/plain"
-                    )
-                elif download_format == ".csv":
-                    # Convert the result into CSV format
-                    result_list = result.splitlines()  # Split into lines (or further process as required)
-                    df = pd.DataFrame(result_list, columns=["Parsed Content"])
-                    csv_data = df.to_csv(index=False)
-                    st.download_button(
-                        label="Download as .csv",
-                        data=csv_data,
-                        file_name="parsed_result.csv",
-                        mime="text/csv"
-                    )
-                elif download_format == ".json":
-                    # Convert the result into JSON format
-                    result_json = json.dumps({"parsed_content": result})
-                    st.download_button(
-                        label="Download as .json",
-                        data=result_json,
-                        file_name="parsed_result.json",
-                        mime="application/json"
-                    )
-            else:
-                st.warning("No parsed content to download.")
+    # Provide the download button only if the content is parsed
+    if st.button('Download Parsed Result'):
+        if st.session_state.result.strip():
+            # Prepare the data to be downloaded
+            if download_format == ".txt":
+                # Download as a .txt file
+                st.download_button(
+                    label="Download as .txt",
+                    data=st.session_state.result,
+                    file_name="parsed_result.txt",
+                    mime="text/plain"
+                )
+            elif download_format == ".csv":
+                # Convert the result into CSV format
+                result_list = st.session_state.result.splitlines()  # Split into lines (or further process as required)
+                df = pd.DataFrame(result_list, columns=["Parsed Content"])
+                csv_data = df.to_csv(index=False)
+                st.download_button(
+                    label="Download as .csv",
+                    data=csv_data,
+                    file_name="parsed_result.csv",
+                    mime="text/csv"
+                )
+            elif download_format == ".json":
+                # Convert the result into JSON format
+                result_json = json.dumps({"parsed_content": st.session_state.result})
+                st.download_button(
+                    label="Download as .json",
+                    data=result_json,
+                    file_name="parsed_result.json",
+                    mime="application/json"
+                )
+        else:
+            st.warning("No parsed content to download.")
